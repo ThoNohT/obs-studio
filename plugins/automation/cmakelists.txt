@@ -1,0 +1,12 @@
+project(automation)
+
+set(automation_SOURCES
+	automation.c)
+
+add_library(automation MODULE
+	${automation_SOURCES})
+
+target_link_libraries(automation
+	libobs)
+
+install_obs_plugin_with_data(automation data)
