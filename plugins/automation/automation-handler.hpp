@@ -1,6 +1,7 @@
 #include <obs-scene.h>
 #include <string>
 #include <obs-data.h>
+#include "automation-settings.hpp"
 
 #define blog(log_level, format, ...) \
 	blog(log_level, "[automation] " format, ##__VA_ARGS__)
@@ -26,7 +27,7 @@ public:
 	void Process();
 
 private:
-	obs_data_t *settings;
+	AutomationSettings *settings;
 	std::string settingsFilename;
 
 	void saveSettings();

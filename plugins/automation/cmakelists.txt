@@ -14,10 +14,12 @@ endif()
 
 set(automation_SOURCES
 	automation.cpp
-	automation-handler.cpp)
+	automation-handler.cpp
+	automation-settings.cpp)
 
 set(automation_HEADERS
-	automation-handler.hpp)
+	automation-handler.hpp
+	automation-settings.hpp)
 
 add_library(automation MODULE
 	${automation_SOURCES}

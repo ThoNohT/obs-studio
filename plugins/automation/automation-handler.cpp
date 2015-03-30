@@ -1,6 +1,4 @@
 #include "automation-handler.hpp"
-#include <obs-scene.h>
-#include <util/threading.h>
 #include <util/util.hpp>
 
 AutomationHandler::AutomationHandler() {
@@ -9,7 +7,7 @@ AutomationHandler::AutomationHandler() {
 
 AutomationHandler::~AutomationHandler() {
 	this->saveSettings();
-	obs_data_release(this->settings);
+	delete this->settings;
 }
 
 void AutomationHandler::LoadSettings(const char *filepath) {
@@ -20,21 +18,18 @@ void AutomationHandler::LoadSettings(const char *filepath) {
 
 	BPtr<char> jsonText = os_quick_read_utf8_file(
 		this->settingsFilename.c_str());
+	obs_data_t *settingsData;
 	if (!jsonText)
 	{
-		this->settings = obs_data_create();
+		settingsData = obs_data_create();
 	}
 	else {
-		this->settings = obs_data_create_from_json(jsonText);
+		settingsData = obs_data_create_from_json(jsonText);
 	}
 
-	const char *x = obs_data_get_string(this->settings, "x");
-	if (strcmp(x, "") == 0)
-		obs_data_set_string(this->settings, "x", "initial value.");
+	this->settings = new AutomationSettings(settingsData);
 
-	x = obs_data_get_string(this->settings, "x");
-
-	info("X is %s", x);
+	obs_data_release(settingsData);
 }
 
 int AutomationHandler::GetTimeout()
@@ -55,8 +50,6 @@ void AutomationHandler::ChannelChanged(void *data, calldata_t *params)
 
 	UNUSED_PARAMETER(data);
 }
-
-// Private static
 
 void AutomationHandler::Process()
 {
@@ -91,7 +84,8 @@ void AutomationHandler::saveSettings()
 	if (this->settings == NULL)
 		return;
 
-	const char *jsonData = obs_data_get_json(this->settings);
+	obs_data_t *data = this->settings->GetSettingsData();
+	const char *jsonData = obs_data_get_json(data);
 
 	if (!!jsonData) {
 		bool success = os_quick_write_utf8_file(
@@ -102,4 +96,6 @@ void AutomationHandler::saveSettings()
 			warn("Could not save settings to %s",
 				this->settingsFilename.c_str());
 	}
+
+	obs_data_release(data);
 }
