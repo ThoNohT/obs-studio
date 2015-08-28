@@ -60,35 +60,50 @@ static void *compressor_create(obs_data_t *settings, obs_source_t *filter)
 	return cd;
 }
 
+static float apply_compressor(float data, float level,
+		struct compressor_data *cd)
+{
+	const float thres = cd->threshold;
+	const float ratio = cd->ratio;
+	const bool expand = cd->is_expander;
+
+	float old = data;
+	float over = level - thres;
+	if (over <= 0.0f) return data;
+
+	if (expand)
+		data = thres + (ratio * over);
+	else
+		data = thres + ((1 / ratio) * over);
+
+	if (old < 0.0f) data *= -1.0f;
+
+	return data;
+}
+
 static struct obs_audio_data *compressor_filter_audio(void *data,
 		struct obs_audio_data *audio)
 {
 	struct compressor_data *cd = data;
 
 	const size_t channels = cd->channels;
-	const float thres = cd->threshold;
-	const float ratio = cd->ratio;
-	const bool expand = cd->is_expander;
+	if (channels == 0) return audio;
 
 	const size_t frame_count = audio->frames;
 
-	for (size_t c = 0; c < channels; ++c) {
-		float *adata = (float*)audio->data[c];
-		for (size_t i = 0; i < frame_count; i++) {
-			float level = fabsf(adata[i]);
-			float old = adata[i];
-			if (level == 0) continue;
-			float over = level - thres;
-
-			if (over > 0.0f)
-			{
-				if (expand)
-					adata[i] = thres + (ratio * over); // Apply expander.
-				else
-					adata[i] = thres + ((1 / ratio) * over); // Apply compressor.
-
-				if (old < 0.0f) adata[i] *= -1.0f; // Correct phase.
-			}
+	for (size_t i = 0; i < frame_count; i++) {
+		float level = 0;
+		for (size_t c = 0; c < channels; ++c) {
+			float *adata = (float*) audio->data[c];
+			level += fabsf(adata[i]);
+		}
+		level /= channels;
+		if (level == 0) continue;
+			
+		for (size_t c = 0; c < channels; ++c) {
+			float *adata = (float*)audio->data[c];
+			adata[i] = apply_compressor((float)adata[i],
+				level, cd);
 		}
 	}
 	
